@@ -13,6 +13,9 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Database\Query\Restriction\EndTimeRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\StartTimeRestriction;
 
 /**
  * Service to wrap around record operations normally going through
@@ -118,7 +121,20 @@ class RecordService implements SingletonInterface
      */
     protected function getQueryBuilder($table)
     {
-        return GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($table);
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable($table);
+        $includeHidden = $GLOBALS['TSFE']->fePreview && (
+                    'pages' === $table
+                        ? $GLOBALS['TSFE']->showHiddenPage
+                        : $GLOBALS['TSFE']->showHiddenRecords
+                );
+        if ($includeHidden) {
+            $queryBuilder
+                ->getRestrictions()
+                ->removeByType(HiddenRestriction::class)
+                ->removeByType(StartTimeRestriction::class)
+                ->removeByType(EndTimeRestriction::class);
+        }
+        return $queryBuilder;
     }
 
 }
